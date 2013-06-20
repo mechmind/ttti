@@ -21,9 +21,13 @@ func (r *Registry) CreateSession() *Session {
     defer r.lock.Unlock()
 
     id := uuid.New()
-    session := &Session{id, nil, nil}
+    session := NewSession(id)
     r.sessions[id] = session
     return session
+}
+
+func (r *Registry) GetSession(sid string) *Session {
+    return r.sessions[sid] // reading from maps is atomic
 }
 
 func (r *Registry) AttachPlayer(session_id string) (player string, err error) {
