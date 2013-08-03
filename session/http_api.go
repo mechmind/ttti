@@ -4,6 +4,7 @@ import (
     "net/http"
     "encoding/json"
     "fmt"
+    "log"
     //"net"
 )
 
@@ -15,7 +16,8 @@ type Handler struct {
 
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
     session := h.r.CreateSession()
-    answer, _ := json.Marshal(map[string]string{"session_id": session.id})
+    answer, _ := json.Marshal(map[string]string{"session_id": session.id, "type": "response"})
+    log.Println("http-api: delivering session", session.id)
     _, _ = w.Write(answer)
 }
 
@@ -31,7 +33,9 @@ func (h *Handler) AttachPlayer(w http.ResponseWriter, r *http.Request) {
         http.Error(w, string(errstr), 400)
         return
     }
-    answer, _ := json.Marshal(map[string]string{"session_id": session, "player_id": player})
+    answer, _ := json.Marshal(map[string]string{"session_id": session, "player_id": player,
+    "type": "response"})
+    log.Printf("http-api: for session '%s' created user '%s'", session, player)
     _, _ = w.Write(answer)
 }
 

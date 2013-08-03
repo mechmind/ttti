@@ -12,12 +12,21 @@ const AWARE_TIMEOUT = 5 * time.Second
 const DEADLINE_TIMEOUT = 30 * time.Second
 const LOST_TIMEOUT = 1 * time.Minute
 
+const (
+    SESSION_PRESTART = iota
+    SESSION_WAITING
+    SESSION_RUNNING
+    SESSION_FINISHED
+    SESSION_ABORTED
+)
+
 type Session struct {
     id string
     p1, p2 *Player
 
     newPlayers chan *newPlayer
     ticker *time.Ticker
+    state int
 }
 
 func NewSession(id string) *Session {
@@ -26,7 +35,8 @@ func NewSession(id string) *Session {
                         &Player{"", &playerConnection{nil, nil, false, false, nil, nil},
                                 time.Time{}},
                     make(chan *newPlayer),
-                    time.NewTicker(AWARE_TIMEOUT)}
+                    time.NewTicker(AWARE_TIMEOUT),
+                    SESSION_PRESTART}
 }
 
 type Player struct {
@@ -41,14 +51,39 @@ type playerConnection struct {
     lost bool
     socket *net.TCPConn
     reader *bufio.Scanner
+    closeCh chan bool
 }
 
 func (p *playerConnection) Close() error {
-    p.alive = false
-    if p.socket != nil {
-        return p.socket.Close()
+    if p.alive {
+        closeCh <- true
+        p.alive = false
+        if p.socket != nil {
+            return p.socket.Close()
+        }
     }
     return nil
+}
+
+func (p *playerConnection) Start() {
+    go p.startReadLoop()
+    go p.startWriteLoop()
+}
+
+func (p *playerConnection) startReadLoop() {
+    for {
+        err := p.reader.Scan()
+        if err != nil {
+            // socket error, disconnecting
+            p.Close()
+            return
+        }
+        line := p.reader.Bytes()
+    }
+}
+
+func (p *playerConnection) startWriteLoop() {
+
 }
 
 type newPlayer struct {
@@ -71,6 +106,7 @@ func (s *Session) AttachPlayer(player_id string) error {
 func (s *Session) handleConnection(p *Player, socket *net.TCPConn, reader *bufio.Scanner) {
     newp := newPlayer{p, &playerConnection{make(chan Message), make(chan Message),
         true, false, socket, reader}}
+    newp.
     s.newPlayers <- &newp
 }
 
@@ -98,7 +134,7 @@ func (s *Session) checkStale(p *Player, now time.Time) {
         p.conn.Close()
     }
 
-    if ! p.conn.lost && p.lastActivity.Sub(now) > LOST_TIMEOUT {
+    if p.lastActivity.Sub(now) > LOST_TIMEOUT {
         s.handleLost(p)
     }
 }

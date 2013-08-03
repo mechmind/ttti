@@ -22,15 +22,9 @@ func sendError(socket *net.TCPConn, code int) error {
     return nil
 }
 
-type GameConnection struct {
-    r *Registry
-    socket *net.TCPConn
-    reader *bufio.Scanner
-}
-
 func doAck(r *Registry, socket *net.TCPConn) {
     reader := bufio.NewScanner(socket)
-    if ! reader.Scan() {
+    if !reader.Scan() {
         err := reader.Err()
         log.Println("acker: cannot read ack", err)
         socket.Close()
@@ -60,7 +54,13 @@ func doAck(r *Registry, socket *net.TCPConn) {
                     sendError(socket, 102)
                     socket.Close()
                 } else {
-                    session.handleConnection(player, socket, reader)
+                    _, err = socket.Write([]byte("{\"type\":\"hello\"}\n"))
+                    if err != nil {
+                        log.Println("acker: client lost after greeting", greet.Sid, greet.Pid)
+                        socket.Close()
+                    } else {
+                        session.handleConnection(player, socket, reader)
+                    }
                 }
             }
         }

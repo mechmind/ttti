@@ -1,5 +1,8 @@
 package session
 
 
-type Message struct {}
+type Message struct {
+    Type string
+    Value interface{}
+}
 
