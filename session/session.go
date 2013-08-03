@@ -1,13 +1,12 @@
 package session
 
 import (
-    "net"
     "errors"
-    "bufio"
     "log"
     "time"
 
     "tic-tac-inception-toe/message"
+    "tic-tac-inception-toe/connection"
 )
 
 const AWARE_TIMEOUT = 5 * time.Second
@@ -32,8 +31,8 @@ type Session struct {
 }
 
 func NewSession(id string) *Session {
-    return &Session{id, &Player{"", newEmptyPlayerConnection(), time.Time{}},
-                        &Player{"", newEmptyPlayerConnection(), time.Time{}},
+    return &Session{id, &Player{"", connection.NewEmptyPlayerConnection(), time.Time{}},
+                        &Player{"", connection.NewEmptyPlayerConnection(), time.Time{}},
                     make(chan *newPlayer),
                     time.NewTicker(AWARE_TIMEOUT),
                     SESSION_PRESTART}
@@ -41,102 +40,13 @@ func NewSession(id string) *Session {
 
 type Player struct {
     id string
-    conn *playerConnection
+    conn *connection.PlayerConnection
     lastActivity time.Time
-}
-
-type playerConnection struct {
-    read, write chan message.Message
-    alive bool
-    lost bool
-    socket *net.TCPConn
-    reader *bufio.Scanner
-    closeCh chan bool
-}
-
-func newEmptyPlayerConnection() *playerConnection {
-    return &playerConnection{nil, nil, false, false, nil, nil, make(chan bool)}
-}
-
-func newPlayerConnection(socket *net.TCPConn, reader *bufio.Scanner) *playerConnection {
-    return &playerConnection{make(chan message.Message), make(chan message.Message), true, false,
-        socket, reader, make(chan bool)}
-}
-
-func (p *playerConnection) Close() error {
-    if p.alive {
-        p.closeCh <- true
-        p.alive = false
-        if p.socket != nil {
-            return p.socket.Close()
-        }
-    }
-    return nil
-}
-
-func (p *playerConnection) Start() {
-    go p.startReadLoop()
-    go p.startWriteLoop()
-}
-
-func (p *playerConnection) startReadLoop() {
-    for {
-        message, err := p.readMessage()
-        if err != nil {
-            p.Close()
-            p.closeCh <- true
-            return
-        }
-        p.read <- message
-    }
-}
-
-func (p *playerConnection) readMessage() (message.Message, error) {
-    ok := p.reader.Scan()
-    if !ok {
-        // socket closed or err
-        return nil, errors.New("Error reading from socket")
-    }
-    line := p.reader.Bytes()
-    message, err := message.ParseMessage(line)
-    if err != nil {
-        // TODO: proper error handling
-        return nil, err
-    }
-    return message, nil
-}
-
-func (p *playerConnection) startWriteLoop() {
-    for {
-        select {
-        case msg := <-p.write:
-            err := p.writeMessage(msg)
-            if err != nil {
-                p.socket.Close()
-                break
-            }
-        case <-p.closeCh:
-            break
-        }
-    }
-}
-
-func (p *playerConnection) writeMessage(msg message.Message) error {
-    buf, err := message.SerializeMessage(msg)
-    if err != nil {
-        return err
-    }
-    buf = append(buf, '\n')
-    _, err = p.socket.Write(buf)
-    if err != nil {
-        return err
-    }
-    return nil
 }
 
 type newPlayer struct {
     player *Player
-    conn *playerConnection
+    conn *connection.PlayerConnection
 }
 
 func (s *Session) AttachPlayer(player_id string) error {
@@ -151,7 +61,7 @@ func (s *Session) AttachPlayer(player_id string) error {
     return nil
 }
 
-func (s *Session) handleConnection(p *Player, pc *playerConnection) {
+func (s *Session) handleConnection(p *Player, pc *connection.PlayerConnection) {
     newp := newPlayer{p, pc}
     s.newPlayers <- &newp
 }
@@ -172,11 +82,11 @@ func (s *Session) ProcessMessage(p *Player, m message.Message) error {
 }
 
 func (s *Session) checkStale(p *Player, now time.Time) {
-    if p.conn.alive && p.lastActivity.Sub(now) > AWARE_TIMEOUT {
-        p.conn.write <- message.MsgPing{"ping"}
+    if p.conn.Alive && p.lastActivity.Sub(now) > AWARE_TIMEOUT {
+        p.conn.Write <- message.MsgPing{"ping"}
     }
 
-    if p.conn.alive && p.lastActivity.Sub(now) > DEADLINE_TIMEOUT {
+    if p.conn.Alive && p.lastActivity.Sub(now) > DEADLINE_TIMEOUT {
         p.conn.Close()
     }
 
@@ -208,13 +118,13 @@ func (s *Session) Run() {
                 log.Print("session: got connection for unknown player", newp.player.id)
                 newp.conn.Close()
             }
-        case m1 := <-s.p1.conn.read:
+        case m1 := <-s.p1.conn.Read:
             if s.ProcessMessage(s.p1, m1) != nil {
                 s.p1.conn.Close()
             } else {
                 s.p1.lastActivity = time.Now()
             }
-        case m2 := <-s.p2.conn.read:
+        case m2 := <-s.p2.conn.Read:
             if s.ProcessMessage(s.p2, m2) != nil {
                 s.p2.conn.Close()
             } else {

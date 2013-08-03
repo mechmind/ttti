@@ -33,6 +33,8 @@ func ParseMessage(src []byte) (Message, error) {
     switch msgType {
     case "attach":
         m = &MsgAttach{}
+    case "hello":
+        m = &MsgHello{}
     case "ping":
         m = &MsgPing{}
     case "pong":

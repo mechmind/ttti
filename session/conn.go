@@ -4,21 +4,20 @@ import (
     "net"
     "fmt"
     "log"
-    "bufio"
 
     "tic-tac-inception-toe/message"
+    "tic-tac-inception-toe/connection"
 )
 
-func sendError(p *playerConnection, code int, msg string) error {
+func sendError(p *connection.PlayerConnection, code int, msg string) error {
     errmsg := message.MsgError{"error", code, msg}
-    err := p.writeMessage(errmsg)
+    err := p.WriteMessage(errmsg)
     return err
 }
 
 func doAck(r *Registry, socket *net.TCPConn) error {
-    reader := bufio.NewScanner(socket)
-    pc := newPlayerConnection(socket, reader)
-    msg, err := pc.readMessage()
+    pc := connection.NewPlayerConnection(socket)
+    msg, err := pc.ReadMessage()
     if err != nil {
         log.Println("acker: cannot read greeting: ", err)
         return socket.Close()
@@ -42,7 +41,7 @@ func doAck(r *Registry, socket *net.TCPConn) error {
         return socket.Close()
     }
     hello := &message.MsgHello{"hello"}
-    err = pc.writeMessage(hello)
+    err = pc.WriteMessage(hello)
     if err != nil {
         log.Println("acker: client lost after greeting", greet.Sid, greet.Pid)
         return socket.Close()
