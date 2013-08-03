@@ -5,11 +5,13 @@ import (
     "fmt"
     "log"
     "bufio"
+
+    "tic-tac-inception-toe/message"
 )
 
-func sendError(p *playerConnection, code int, message string) error {
-    msg := MsgError{"error", code, message}
-    err := p.writeMessage(msg)
+func sendError(p *playerConnection, code int, msg string) error {
+    errmsg := message.MsgError{"error", code, msg}
+    err := p.writeMessage(errmsg)
     return err
 }
 
@@ -26,7 +28,7 @@ func doAck(r *Registry, socket *net.TCPConn) error {
         sendError(pc, 100, "first message must be 'attach'")
         return socket.Close()
     }
-    greet := msg.(*MsgAttach)
+    greet := msg.(*message.MsgAttach)
     session := r.GetSession(greet.Sid)
     if session == nil {
         log.Println("acker: invalid session", greet.Sid)
@@ -39,7 +41,7 @@ func doAck(r *Registry, socket *net.TCPConn) error {
         sendError(pc, 102, "no such player for this session")
         return socket.Close()
     }
-    hello := &MsgHello{"hello"}
+    hello := &message.MsgHello{"hello"}
     err = pc.writeMessage(hello)
     if err != nil {
         log.Println("acker: client lost after greeting", greet.Sid, greet.Pid)

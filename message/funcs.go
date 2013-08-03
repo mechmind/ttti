@@ -1,15 +1,12 @@
-package session
+package message
 
 import (
     "encoding/json"
     "errors"
 )
 
-type Message interface {
-    GetType() string
-}
 
-func parseMessage(src []byte) (Message, error) {
+func ParseMessage(src []byte) (Message, error) {
     var parsed interface{}
     // first, parse as map and extract `type`
     err := json.Unmarshal(src, &parsed)
@@ -36,6 +33,10 @@ func parseMessage(src []byte) (Message, error) {
     switch msgType {
     case "attach":
         m = &MsgAttach{}
+    case "ping":
+        m = &MsgPing{}
+    case "pong":
+        m = &MsgPong{}
     }
 
     err = json.Unmarshal(src, m)
@@ -46,29 +47,7 @@ func parseMessage(src []byte) (Message, error) {
     return m, nil
 }
 
-func serializeMessage(m Message) ([]byte, error) {
+func SerializeMessage(m Message) ([]byte, error) {
     return json.Marshal(m)
-}
-
-type Type string
-
-func (t Type) GetType() string {
-    return string(t)
-}
-
-type MsgAttach struct {
-    Type `json:"type"`
-    Sid string `json:"sid"`
-    Pid string `json:"pid"`
-}
-
-type MsgHello struct {
-    Type `json:"type"`
-}
-
-type MsgError struct {
-    Type `json:"type"`
-    Code int `json:"code"`
-    Message string `json:"message"`
 }
 

@@ -6,6 +6,8 @@ import (
     "bufio"
     "log"
     "time"
+
+    "tic-tac-inception-toe/message"
 )
 
 const AWARE_TIMEOUT = 5 * time.Second
@@ -44,7 +46,7 @@ type Player struct {
 }
 
 type playerConnection struct {
-    read, write chan Message
+    read, write chan message.Message
     alive bool
     lost bool
     socket *net.TCPConn
@@ -57,8 +59,8 @@ func newEmptyPlayerConnection() *playerConnection {
 }
 
 func newPlayerConnection(socket *net.TCPConn, reader *bufio.Scanner) *playerConnection {
-    return &playerConnection{make(chan Message), make(chan Message), true, false, socket, reader,
-        make(chan bool)}
+    return &playerConnection{make(chan message.Message), make(chan message.Message), true, false,
+        socket, reader, make(chan bool)}
 }
 
 func (p *playerConnection) Close() error {
@@ -89,14 +91,14 @@ func (p *playerConnection) startReadLoop() {
     }
 }
 
-func (p *playerConnection) readMessage() (Message, error) {
+func (p *playerConnection) readMessage() (message.Message, error) {
     ok := p.reader.Scan()
     if !ok {
         // socket closed or err
         return nil, errors.New("Error reading from socket")
     }
     line := p.reader.Bytes()
-    message, err := parseMessage(line)
+    message, err := message.ParseMessage(line)
     if err != nil {
         // TODO: proper error handling
         return nil, err
@@ -119,8 +121,8 @@ func (p *playerConnection) startWriteLoop() {
     }
 }
 
-func (p *playerConnection) writeMessage(msg Message) error {
-    buf, err := serializeMessage(msg)
+func (p *playerConnection) writeMessage(msg message.Message) error {
+    buf, err := message.SerializeMessage(msg)
     if err != nil {
         return err
     }
@@ -165,13 +167,13 @@ func (s *Session) GetPlayer(player_id string) *Player {
     }
 }
 
-func (s *Session) ProcessMessage(p *Player, m Message) error {
+func (s *Session) ProcessMessage(p *Player, m message.Message) error {
     return nil
 }
 
 func (s *Session) checkStale(p *Player, now time.Time) {
     if p.conn.alive && p.lastActivity.Sub(now) > AWARE_TIMEOUT {
-        //p.conn.write <- Message{} //TODO: handle lost
+        p.conn.write <- message.MsgPing{"ping"}
     }
 
     if p.conn.alive && p.lastActivity.Sub(now) > DEADLINE_TIMEOUT {
