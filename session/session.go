@@ -30,10 +30,8 @@ type Session struct {
 }
 
 func NewSession(id string) *Session {
-    return &Session{id, &Player{"", &playerConnection{nil, nil, false, false, nil, nil},
-                                time.Time{}},
-                        &Player{"", &playerConnection{nil, nil, false, false, nil, nil},
-                                time.Time{}},
+    return &Session{id, &Player{"", newEmptyPlayerConnection(), time.Time{}},
+                        &Player{"", newEmptyPlayerConnection(), time.Time{}},
                     make(chan *newPlayer),
                     time.NewTicker(AWARE_TIMEOUT),
                     SESSION_PRESTART}
@@ -54,9 +52,18 @@ type playerConnection struct {
     closeCh chan bool
 }
 
+func newEmptyPlayerConnection() *playerConnection {
+    return &playerConnection{nil, nil, false, false, nil, nil, make(chan bool)}
+}
+
+func newPlayerConnection(socket *net.TCPConn, reader *bufio.Scanner) *playerConnection {
+    return &playerConnection{make(chan Message), make(chan Message), true, false, socket, reader,
+        make(chan bool)}
+}
+
 func (p *playerConnection) Close() error {
     if p.alive {
-        closeCh <- true
+        p.closeCh <- true
         p.alive = false
         if p.socket != nil {
             return p.socket.Close()
@@ -72,18 +79,57 @@ func (p *playerConnection) Start() {
 
 func (p *playerConnection) startReadLoop() {
     for {
-        err := p.reader.Scan()
+        message, err := p.readMessage()
         if err != nil {
-            // socket error, disconnecting
             p.Close()
+            p.closeCh <- true
             return
         }
-        line := p.reader.Bytes()
+        p.read <- message
     }
 }
 
-func (p *playerConnection) startWriteLoop() {
+func (p *playerConnection) readMessage() (Message, error) {
+    ok := p.reader.Scan()
+    if !ok {
+        // socket closed or err
+        return nil, errors.New("Error reading from socket")
+    }
+    line := p.reader.Bytes()
+    message, err := parseMessage(line)
+    if err != nil {
+        // TODO: proper error handling
+        return nil, err
+    }
+    return message, nil
+}
 
+func (p *playerConnection) startWriteLoop() {
+    for {
+        select {
+        case msg := <-p.write:
+            err := p.writeMessage(msg)
+            if err != nil {
+                p.socket.Close()
+                break
+            }
+        case <-p.closeCh:
+            break
+        }
+    }
+}
+
+func (p *playerConnection) writeMessage(msg Message) error {
+    buf, err := serializeMessage(msg)
+    if err != nil {
+        return err
+    }
+    buf = append(buf, '\n')
+    _, err = p.socket.Write(buf)
+    if err != nil {
+        return err
+    }
+    return nil
 }
 
 type newPlayer struct {
@@ -103,10 +149,8 @@ func (s *Session) AttachPlayer(player_id string) error {
     return nil
 }
 
-func (s *Session) handleConnection(p *Player, socket *net.TCPConn, reader *bufio.Scanner) {
-    newp := newPlayer{p, &playerConnection{make(chan Message), make(chan Message),
-        true, false, socket, reader}}
-    newp.
+func (s *Session) handleConnection(p *Player, pc *playerConnection) {
+    newp := newPlayer{p, pc}
     s.newPlayers <- &newp
 }
 
@@ -127,7 +171,7 @@ func (s *Session) ProcessMessage(p *Player, m Message) error {
 
 func (s *Session) checkStale(p *Player, now time.Time) {
     if p.conn.alive && p.lastActivity.Sub(now) > AWARE_TIMEOUT {
-        p.conn.write <- Message{}
+        //p.conn.write <- Message{} //TODO: handle lost
     }
 
     if p.conn.alive && p.lastActivity.Sub(now) > DEADLINE_TIMEOUT {

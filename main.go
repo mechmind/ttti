@@ -1,7 +1,7 @@
 package main
 
 import (
-    "balda/session"
+    "tic-tac-inception-toe/session"
 )
 
 func main() {

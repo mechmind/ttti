@@ -5,66 +5,48 @@ import (
     "fmt"
     "log"
     "bufio"
-    "encoding/json"
 )
 
-type Greeting struct {
-    Type string `json:"type"`
-    Sid string `json:"sid"`
-    Pid string `json:"pid"`
+func sendError(p *playerConnection, code int, message string) error {
+    msg := MsgError{"error", code, message}
+    err := p.writeMessage(msg)
+    return err
 }
 
-func sendError(socket *net.TCPConn, code int) error {
-    _, err := fmt.Fprintf(socket, `{"type": "error", "code": %d, "fatal": true, "message": ""}\n`, code)
-    if err != nil {
-        return err
-    }
-    return nil
-}
-
-func doAck(r *Registry, socket *net.TCPConn) {
+func doAck(r *Registry, socket *net.TCPConn) error {
     reader := bufio.NewScanner(socket)
-    if !reader.Scan() {
-        err := reader.Err()
-        log.Println("acker: cannot read ack", err)
-        socket.Close()
-    } else {
-        header := reader.Bytes()
-        var greet = Greeting{}
-        err := json.Unmarshal(header, &greet)
-        if err != nil {
-            log.Println("acker: invalid greeting", err)
-            sendError(socket, 100)
-            socket.Close()
-        } else {
-            if greet.Type != "attach" {
-                log.Println("acker: invalid greeting - not an attach")
-                sendError(socket, 100)
-                socket.Close()
-            }
-            session := r.GetSession(greet.Sid)
-            if session == nil {
-                log.Println("acker: invalid session", greet.Sid)
-                sendError(socket, 101)
-                socket.Close()
-            } else {
-                player := session.GetPlayer(greet.Pid)
-                if player == nil {
-                    log.Println("acker: invalid player for session", greet.Sid, greet.Pid)
-                    sendError(socket, 102)
-                    socket.Close()
-                } else {
-                    _, err = socket.Write([]byte("{\"type\":\"hello\"}\n"))
-                    if err != nil {
-                        log.Println("acker: client lost after greeting", greet.Sid, greet.Pid)
-                        socket.Close()
-                    } else {
-                        session.handleConnection(player, socket, reader)
-                    }
-                }
-            }
-        }
+    pc := newPlayerConnection(socket, reader)
+    msg, err := pc.readMessage()
+    if err != nil {
+        log.Println("acker: cannot read greeting: ", err)
+        return socket.Close()
     }
+    if msg.GetType() != "attach" {
+        log.Println("acket: client wont attach, weird")
+        sendError(pc, 100, "first message must be 'attach'")
+        return socket.Close()
+    }
+    greet := msg.(*MsgAttach)
+    session := r.GetSession(greet.Sid)
+    if session == nil {
+        log.Println("acker: invalid session", greet.Sid)
+        sendError(pc, 101, "session does not exists")
+        return socket.Close()
+    }
+    player := session.GetPlayer(greet.Pid)
+    if player == nil {
+        log.Println("acker: invalid player for session", greet.Sid, greet.Pid)
+        sendError(pc, 102, "no such player for this session")
+        return socket.Close()
+    }
+    hello := &MsgHello{"hello"}
+    err = pc.writeMessage(hello)
+    if err != nil {
+        log.Println("acker: client lost after greeting", greet.Sid, greet.Pid)
+        return socket.Close()
+    }
+    session.handleConnection(player, pc)
+    return nil
 }
 
 func ServeGame(addrstr string, r *Registry) {
