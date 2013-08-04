@@ -17,8 +17,6 @@ func NewHttpClient(server string) *HttpClient {
     return &HttpClient{server}
 }
 
-//func (h *HttpClient) {}
-
 
 type HttpAdminClient struct {
     server string

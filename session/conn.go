@@ -5,8 +5,8 @@ import (
     "fmt"
     "log"
 
-    "tic-tac-inception-toe/message"
-    "tic-tac-inception-toe/connection"
+    "github.com/mechmind/ttti-server/message"
+    "github.com/mechmind/ttti-server/connection"
 )
 
 func sendError(p *connection.PlayerConnection, code int, msg string) error {

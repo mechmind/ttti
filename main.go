@@ -1,7 +1,7 @@
 package main
 
 import (
-    "tic-tac-inception-toe/session"
+    "github.com/mechmind/ttti-server/session"
 )
 
 func main() {

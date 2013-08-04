@@ -4,8 +4,8 @@ import (
     "errors"
     "net"
 
-    "tic-tac-inception-toe/connection"
-    "tic-tac-inception-toe/message"
+    "github.com/mechmind/ttti-server/connection"
+    "github.com/mechmind/ttti-server/message"
 )
 
 

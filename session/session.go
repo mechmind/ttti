@@ -5,8 +5,8 @@ import (
     "log"
     "time"
 
-    "tic-tac-inception-toe/message"
-    "tic-tac-inception-toe/connection"
+    "github.com/mechmind/ttti-server/message"
+    "github.com/mechmind/ttti-server/connection"
 )
 
 const AWARE_TIMEOUT = 5 * time.Second

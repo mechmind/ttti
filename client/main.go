@@ -34,5 +34,14 @@ func main() {
         log.Println("main: cannot establish connection", err)
     }
 
+    err = runGame(c)
+    if err != nil {
+        log.Println("main: game finished with error: ", err)
+    }
+
     log.Println("main: finished")
+}
+
+func runGame(c *Client) error {
+    return nil
 }

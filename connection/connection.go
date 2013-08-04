@@ -5,7 +5,7 @@ import (
     "bufio"
     "errors"
 
-    "tic-tac-inception-toe/message"
+    "github.com/mechmind/ttti-server/message"
 )
 
 type PlayerConnection struct {
