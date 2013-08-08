@@ -46,6 +46,7 @@ func doAck(r *Registry, socket *net.TCPConn) error {
         log.Println("acker: client lost after greeting", greet.Sid, greet.Pid)
         return socket.Close()
     }
+    log.Printf("acker: handshake succeed for session %s, client %s", greet.Sid, greet.Pid)
     session.handleConnection(player, pc)
     return nil
 }

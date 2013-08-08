@@ -22,6 +22,7 @@ func (r *Registry) CreateSession() *Session {
 
     id := uuid.New()
     session := NewSession(id)
+    go session.Run()
     r.sessions[id] = session
     return session
 }

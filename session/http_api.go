@@ -17,7 +17,7 @@ type Handler struct {
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
     session := h.r.CreateSession()
     answer, _ := json.Marshal(map[string]string{"session_id": session.id, "type": "response"})
-    log.Println("http-api: delivering session", session.id)
+    log.Printf("http-api: created session '%s'", session.id)
     _, _ = w.Write(answer)
 }
 
@@ -35,7 +35,7 @@ func (h *Handler) AttachPlayer(w http.ResponseWriter, r *http.Request) {
     }
     answer, _ := json.Marshal(map[string]string{"session_id": session, "player_id": player,
     "type": "response"})
-    log.Printf("http-api: for session '%s' created user '%s'", session, player)
+    log.Printf("http-api: updated session '%s' attached player '%s'", session, player)
     _, _ = w.Write(answer)
 }
 

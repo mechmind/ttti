@@ -3,6 +3,7 @@ package main
 import (
     "log"
     "flag"
+
 )
 
 var session = flag.String("session", "", "session to attach to")
@@ -32,6 +33,7 @@ func main() {
     err = c.Connect()
     if err != nil {
         log.Println("main: cannot establish connection", err)
+        return
     }
 
     err = runGame(c)
@@ -42,6 +44,3 @@ func main() {
     log.Println("main: finished")
 }
 
-func runGame(c *Client) error {
-    return nil
-}

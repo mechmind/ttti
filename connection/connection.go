@@ -4,8 +4,14 @@ import (
     "net"
     "bufio"
     "errors"
+    "log"
 
     "github.com/mechmind/ttti-server/message"
+)
+
+const (
+    READ_BUFFER = 5
+    WRITE_BUFFER = 5
 )
 
 type PlayerConnection struct {
@@ -22,8 +28,9 @@ func NewEmptyPlayerConnection() *PlayerConnection {
 }
 
 func NewPlayerConnection(socket *net.TCPConn) *PlayerConnection {
-    return &PlayerConnection{make(chan message.Message), make(chan message.Message), true, false,
-        socket, bufio.NewScanner(socket), make(chan bool)}
+    return &PlayerConnection{make(chan message.Message, READ_BUFFER),
+        make(chan message.Message, WRITE_BUFFER), true, false, socket, bufio.NewScanner(socket),
+        make(chan bool, 1)}
 }
 
 func (p *PlayerConnection) Close() error {
@@ -43,11 +50,13 @@ func (p *PlayerConnection) Start() {
 }
 
 func (p *PlayerConnection) startReadLoop() {
+    log.Println("connection: Starting read loop...")
+    defer log.Println("connection: Read loop finished")
     for {
         message, err := p.ReadMessage()
         if err != nil {
+            log.Println("connection: Read loop got error, exiting")
             p.Close()
-            p.closeCh <- true
             return
         }
         p.Read <- message
@@ -70,16 +79,20 @@ func (p *PlayerConnection) ReadMessage() (message.Message, error) {
 }
 
 func (p *PlayerConnection) startWriteLoop() {
+    log.Println("connection: Starting write loop...")
+    defer log.Println("connection: Write loop finished")
     for {
         select {
         case msg := <-p.Write:
             err := p.WriteMessage(msg)
             if err != nil {
+                log.Println("connection: Write loop got error, exiting")
                 p.socket.Close()
-                break
+                return
             }
         case <-p.closeCh:
-            break
+            log.Println("connection: Write loop got exit message, exiting")
+            return
         }
     }
 }

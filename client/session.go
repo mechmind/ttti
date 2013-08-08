@@ -3,6 +3,7 @@ package main
 import (
     "errors"
     "net"
+    "log"
 
     "github.com/mechmind/ttti-server/connection"
     "github.com/mechmind/ttti-server/message"
@@ -35,6 +36,7 @@ func (c *Client) Connect() error {
         socket.Close()
         return err
     }
+    log.Println("client: handshake succeed")
     c.connection = conn
     return nil
 }
@@ -63,3 +65,6 @@ func (c *Client) handshake(socket *net.TCPConn) (*connection.PlayerConnection, e
     return conn, nil
 }
 
+func (c *Client) Start() {
+    c.connection.Start()
+}
