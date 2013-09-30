@@ -27,14 +27,14 @@ func (h *Handler) AttachPlayer(w http.ResponseWriter, r *http.Request) {
         http.Error(w, `{"type":"error", "message":"session_id is missing"}`, 400)
         return
     }
-    player, err := h.r.AttachPlayer(session)
+    player, glyph, err := h.r.AttachPlayer(session)
     if err != nil {
         errstr, _ := json.Marshal(map[string]string{"type":"error", "message":err.Error()})
         http.Error(w, string(errstr), 400)
         return
     }
     answer, _ := json.Marshal(map[string]string{"session_id": session, "player_id": player,
-    "type": "response"})
+    "player_glyph": glyph, "type": "response"})
     log.Printf("http-api: updated session '%s' attached player '%s'", session, player)
     _, _ = w.Write(answer)
 }

@@ -31,18 +31,18 @@ func (r *Registry) GetSession(sid string) *Session {
     return r.sessions[sid] // reading from maps is atomic
 }
 
-func (r *Registry) AttachPlayer(session_id string) (player string, err error) {
+func (r *Registry) AttachPlayer(session_id string) (player string, glyph string, err error) {
     r.lock.Lock()
     defer r.lock.Unlock()
 
     session, ok := r.sessions[session_id]
     if ! ok {
-        return "", errors.New("Session not found")
+        return "", "", errors.New("Session not found")
     }
     player = uuid.New()
-    err = session.AttachPlayer(player)
+    glyph, err = session.AttachPlayer(player)
     if err != nil {
-        return "", err
+        return "", "", err
     }
-    return player, nil
+    return player, glyph, nil
 }

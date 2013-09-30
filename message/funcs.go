@@ -39,6 +39,16 @@ func ParseMessage(src []byte) (Message, error) {
         m = &MsgPing{}
     case "pong":
         m = &MsgPong{}
+    case "make-turn":
+        m = &MsgMakeTurn{}
+    case "turn":
+        m = &MsgTurn{}
+    case "game-over":
+        m = &MsgGameOver{}
+    case "error":
+        m = &MsgError{}
+    case "game-state":
+        m = &MsgGameState{}
     }
 
     err = json.Unmarshal(src, m)
