@@ -57,7 +57,7 @@ func (c *Client) handshake(socket *net.TCPConn) (*connection.PlayerConnection, e
     if hello.GetType() != "hello" {
         switch hello.GetType() {
         case "error":
-            errmsg := hello.(message.MsgError)
+            errmsg := hello.(*message.MsgError)
             return nil, errors.New("server kicks us with error: " + errmsg.Message)
         default:
             return nil, errors.New("server going mad! Type is: " + hello.GetType())

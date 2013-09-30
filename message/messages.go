@@ -33,15 +33,16 @@ type MsgPong struct {
 
 type MsgMakeTurn struct {
     Type `json:"type"`
-    Coord int32 `json:"coord"`
+    Coord int `json:"coord"`
     Glyph string `json:"glyph"`
 }
 
 type MsgTurn struct {
     Type `json:"type"`
-    Coord int32 `json:"coord"`
+    Coord int `json:"coord"`
     Glyph string `json:"glyph"`
-    YouNext bool `json:"you_next"`
+    NextGlyph string `json:"next_glyph"`
+    NextSquare int `json:"next_square"`
 }
 
 type MsgError struct {
@@ -55,6 +56,7 @@ type MsgGameState struct {
     Field string `json:"field"`
     State string `json:"state"`
     Turn string `json:"turn"`
+    TurnSquare int `json:"turn_square"`
     Players []Player `json:"players"`
 }
 

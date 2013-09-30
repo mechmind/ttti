@@ -127,37 +127,36 @@ func (s *Session) HandleMessage(p *Player, m message.Message) error {
         log.Println("session: got pong")
     case "ping":
         // send pong
-        p.Send(message.MsgPong{"pong"})
+        p.Send(&message.MsgPong{"pong"})
     case "make-turn":
         // check and reply 'turn'
-        turn := m.(message.MsgMakeTurn)
+        turn := m.(*message.MsgMakeTurn)
         glyph, pos, err := checkTurn(turn)
         if err != nil {
             return err
         }
-        winner, err := s.game.MakeTurn(glyph, pos)
+        next, nextSquare, winner, err := s.game.MakeTurn(glyph, pos)
         if err != nil {
             return err
         }
-        // send turn 
-        sameTurn := message.MsgTurn{"turn", turn.Coord, turn.Glyph, false}
-        p.Send(sameTurn)
-        oppTurn := sameTurn
-        oppTurn.YouNext = true
-        s.getOpponent(p).Send(oppTurn)
 
+        // send turn 
         if winner != game.EMPTY_GLYPH {
-            sameTurn := message.MsgTurn{"turn", turn.Coord, string(byte(game.EMPTY_GLYPH)), false}
+            sameTurn := message.MsgTurn{"turn", turn.Coord, turn.Glyph,
+                string(byte(game.EMPTY_GLYPH)), nextSquare}
             p.Send(sameTurn)
             s.getOpponent(p).Send(sameTurn)
             // we have a winner
-            s.handleWinner(winner, GAMEOVER_WIN)
+            if winner == game.DRAW_GLYPH {
+                s.handleWinner(winner, GAMEOVER_DRAW)
+            } else {
+                s.handleWinner(winner, GAMEOVER_WIN)
+            }
         } else {
-            sameTurn := message.MsgTurn{"turn", turn.Coord, turn.Glyph, false}
+            sameTurn := message.MsgTurn{"turn", turn.Coord, turn.Glyph,
+                string(byte(next)), nextSquare}
             p.Send(sameTurn)
-            oppTurn := sameTurn
-            oppTurn.YouNext = true
-            s.getOpponent(p).Send(oppTurn)
+            s.getOpponent(p).Send(sameTurn)
         }
 
     default:
@@ -246,6 +245,7 @@ func (s *Session) Run() {
         case m1 := <-s.p1.conn.Read:
             err := s.HandleMessage(s.p1, m1)
             if err != nil {
+                log.Println("session: error handling message: ", err)
                 s.p1.conn.Close()
             } else {
                 s.p1.lastActivity = time.Now()
@@ -253,6 +253,7 @@ func (s *Session) Run() {
         case m2 := <-s.p2.conn.Read:
             err := s.HandleMessage(s.p2, m2)
             if err != nil {
+                log.Println("session: error handling message: ", err)
                 s.p2.conn.Close()
             } else {
                 s.p2.lastActivity = time.Now()
@@ -265,13 +266,13 @@ func (s *Session) Run() {
 }
 
 
-func checkTurn(m message.MsgMakeTurn) (game.Glyph, int, error) {
+func checkTurn(m *message.MsgMakeTurn) (game.Glyph, int, error) {
     if len(m.Glyph) != 1 {
         return 0, 0, errors.New("checkTurn: glyph must be 1-character string")
     }
 
     glyph := game.Glyph(m.Glyph[0])
-    if glyph != game.P1_GLYPH || glyph != game.P2_GLYPH {
+    if glyph != game.P1_GLYPH && glyph != game.P2_GLYPH {
         return 0, 0, errors.New("checkTurn: given glyph does not belong to player")
     }
 
@@ -279,5 +280,5 @@ func checkTurn(m message.MsgMakeTurn) (game.Glyph, int, error) {
     if pos < 0 || pos >= game.TOTAL_CELLS {
         return 0, 0, errors.New("checkTurn: pos out of range")
     }
-    return glyph, int(pos), nil
+    return glyph, pos, nil
 }

@@ -30,8 +30,8 @@ func (s *Session) glyph2player(g game.Glyph) string {
 
 
 func (s *Session) makeState() (message.MsgGameState, game.Glyph) {
-    field, turn, winner := s.game.GetStatus()
-    msg := message.MsgGameState{"game-state", "", STATES[s.state], "", nil}
+    field, turn, turnSquare, winner := s.game.GetStatus()
+    msg := message.MsgGameState{"game-state", "", STATES[s.state], "", turnSquare, nil}
     buf := make([]byte, len(field))
     for i := range field {
         buf[i] = byte(field[i])
