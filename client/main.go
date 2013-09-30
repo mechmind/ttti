@@ -22,14 +22,14 @@ func main() {
         }
         log.Println("main: created session", *session)
     }
-    player, err := hc.AttachPlayer(*session)
+    player, glyph, err := hc.AttachPlayer(*session)
     if err != nil {
         log.Println("main: failed to attach to session", err)
         return
     }
-    log.Printf("main: attached to session '%s' as player '%s'", *session, player)
+    log.Printf("main: attached to session '%s' as player '%s', glyph %s", *session, player, glyph)
 
-    c := NewClient(*host, *session, player)
+    c := NewClient(*host, *session, player, glyph)
     err = c.Connect()
     if err != nil {
         log.Println("main: cannot establish connection", err)

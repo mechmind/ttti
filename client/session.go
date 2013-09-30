@@ -14,11 +14,12 @@ type Client struct {
     host string
     session string
     player string
+    glyph string
     connection *connection.PlayerConnection
 }
 
-func NewClient(host string, session string, player string) *Client {
-    return &Client{host, session, player, nil}
+func NewClient(host string, session string, player string, glyph string) *Client {
+    return &Client{host, session, player, glyph, nil}
 }
 
 func (c *Client) Connect() error {
@@ -57,7 +58,7 @@ func (c *Client) handshake(socket *net.TCPConn) (*connection.PlayerConnection, e
         switch hello.GetType() {
         case "error":
             errmsg := hello.(message.MsgError)
-            return nil, errors.New("server kiks us with error: " + errmsg.Message)
+            return nil, errors.New("server kicks us with error: " + errmsg.Message)
         default:
             return nil, errors.New("server going mad! Type is: " + hello.GetType())
         }

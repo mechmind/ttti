@@ -4,18 +4,13 @@ import (
     "log"
 
     "github.com/mechmind/ttti-server/message"
+    "github.com/mechmind/ttti-server/client/game"
 )
 
 
-type Game struct {}
-
-func (g *Game) HandleMessage(message.Message) message.Message {
-    return nil
-}
-
 func runGame(c *Client) error {
     c.Start()
-    game := &Game{}
+    g := game.NewGame(c.glyph[0])
     for msg := range c.connection.Read {
         log.Println("game: recieved message: ", msg)
 
@@ -24,11 +19,24 @@ func runGame(c *Client) error {
             c.connection.Write <- pong
         } else if msg.GetType() == "pong" {
         } else {
-            answer := game.HandleMessage(msg)
-            if answer != nil {
-                c.connection.Write <- answer
-            }
+            handleMessage(g, msg)
         }
+    }
+    return nil
+}
+
+func handleMessage(game *game.Game, msg message.Message) error {
+    switch msg.GetType() {
+    case "game-state":
+        // load state
+    case "turn":
+        // opponent made turn
+    case "game-over":
+        // game is over
+    case "error":
+        // got error
+    default:
+        log.Println("Unknown message: ", msg)
     }
     return nil
 }

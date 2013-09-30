@@ -4,15 +4,22 @@ import (
     "github.com/mechmind/ttti-server/message"
 )
 
-type gameConnector struct {
-    Input, Output chan message.Message
+const (
+    STATE_WAITING = iota
+    STATE_RUNNING
+)
+
+type Game struct {
+    state int
+    myGlyph byte
+    field Field
 }
 
-func makeGameConnector() gameConnector {
-    return gameConnector{make(chan message.Message), make(chan message.Message)}
+func NewGame(glyph byte) *Game {
+    return &Game{0, glyph, NewField()}
 }
 
 
-type Game interface {
-    Start()
+func (g *Game) HandleMessage(m message.Message) message.Message {
+    return m
 }
