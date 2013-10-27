@@ -5,7 +5,7 @@ import (
     "fmt"
     "io"
     "os"
-    "log"
+    //"log"
 )
 
 
@@ -55,24 +55,24 @@ func (b BigSquare) CheckWinner() Glyph {
     // check columns
     for i := 0; i < SIZE; i++ {
         if won, winner := checkWinner(b[i], b[i + SIZE], b[i + SIZE * 2]); won {
-            log.Println("won on column", i)
+            //log.Println("won on column", i)
             return winner
         }
     }
     // check rows
     for i := 0; i < SIZE; i++ {
         if won, winner := checkWinner(b[i * SIZE], b[i * SIZE + 1], b[i * SIZE + 2]); won {
-            log.Println("won on row", i)
+            //log.Println("won on row", i)
             return winner
         }
     }
     // check diagonals
     if won, winner := checkWinner(b[0], b[4], b[8]); won {
-        log.Println("won on 1 diag")
+        //log.Println("won on 1 diag")
         return winner
     }
     if won, winner := checkWinner(b[2], b[4], b[6]); won {
-        log.Println("won on 2 diag")
+        //log.Println("won on 2 diag")
         return winner
     }
 

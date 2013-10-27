@@ -15,9 +15,15 @@ type Handler struct {
 
 
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
-    session := h.r.CreateSession()
-    answer, _ := json.Marshal(map[string]string{"session_id": session.id, "type": "response"})
-    log.Printf("http-api: created session '%s'", session.id)
+    id := r.FormValue("session_id")
+    session, err := h.r.CreateSession(id)
+    var answer []byte
+    if err == nil {
+        answer, _ = json.Marshal(map[string]string{"session_id": session.id, "type": "response"})
+        log.Printf("http-api: created session '%s'", session.id)
+    } else {
+        answer, _ = json.Marshal(map[string]string{"type": "error", "message": err.Error()})
+    }
     _, _ = w.Write(answer)
 }
 
@@ -27,7 +33,12 @@ func (h *Handler) AttachPlayer(w http.ResponseWriter, r *http.Request) {
         http.Error(w, `{"type":"error", "message":"session_id is missing"}`, 400)
         return
     }
-    player, glyph, err := h.r.AttachPlayer(session)
+    player := r.FormValue("player_id")
+    if player == "" {
+        http.Error(w, `{"type":"error", "message":"player_id is missing"}`, 400)
+        return
+    }
+    player, glyph, err := h.r.AttachPlayer(session, player)
     if err != nil {
         errstr, _ := json.Marshal(map[string]string{"type":"error", "message":err.Error()})
         http.Error(w, string(errstr), 400)
